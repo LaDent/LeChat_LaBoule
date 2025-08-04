@@ -1,1 +1,91 @@
 
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boule Roulante</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cannon@0.6.2/build/cannon.min.js"></script>
+    <script>
+        // Initialisation de Three.js
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.querySelector('canvas') || document.createElement('canvas') });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Initialisation de Cannon.js
+        const world = new CANNON.World();
+        world.gravity.set(0, -9.82, 0); // Gravité
+
+        // Création d'une boule
+        const sphereGeometry = new THREE.SphereGeometry(1, 32, 32);
+        const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+        scene.add(sphere);
+
+        // Création d'un corps physique pour la boule avec Cannon.js
+        const sphereBody = new CANNON.Body({
+            mass: 5,
+            shape: new CANNON.Sphere(1)
+        });
+        world.addBody(sphereBody);
+
+        // Création d'un plan
+        const planeGeometry = new THREE.PlaneGeometry(20, 20);
+        const planeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.rotation.x = -Math.PI / 2;
+        scene.add(plane);
+
+        // Création d'un corps physique pour le plan avec Cannon.js
+        const planeBody = new CANNON.Body({
+            mass: 0,
+            shape: new CANNON.Plane()
+        });
+        planeBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+        world.addBody(planeBody);
+
+        // Gestion de l'inclinaison du smartphone
+        window.addEventListener('deviceorientation', handleOrientation);
+
+        function handleOrientation(event) {
+            const x = event.beta || 0;  // Inclinaison avant/arrière
+            const y = event.gamma || 0; // Inclinaison gauche/droite
+
+            // Appliquer l'inclinaison à la scène
+            planeBody.quaternion.setFromEuler(-y * Math.PI / 180, x * Math.PI / 180, 0);
+        }
+
+        camera.position.z = 10;
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Mettre à jour la physique
+            world.step(1/60);
+
+            // Mettre à jour la position de la boule dans Three.js
+            sphere.position.copy(sphereBody.position);
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
